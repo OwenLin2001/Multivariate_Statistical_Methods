@@ -1,0 +1,125 @@
+---
+title: "Stats 140 Homework 3"
+author: "Owen Lin"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "D://Coding//Stats140 Multivariate Statistical Learning//Data")
+```
+
+```{r, include = F}
+library(MASS)
+library(readxl)
+library(ggplot2)
+```
+
+
+```{r}
+# Load data
+setwd("D://Coding//Stats140 Multivariate Statistical Learning//Data")
+db = as.data.frame(read_excel("Dry_Bean_Dataset.xlsx"))
+db = db[db$Class %in% c('BARBUNYA', 'BOMBAY', "HOROZ", "SEKER"),]
+db = db[ , c("Area",'Perimeter','MajorAxisLength','MinorAxisLength','Eccentricity', 'ConvexArea','Extent','Solidity','roundness', "Class")]
+
+
+# TrainTestSplit
+train_index = sample(nrow(db), round(0.8*nrow(db)))
+training = db[train_index, ]
+testing = db[-train_index, ]
+X_train = training[, -10]
+y_train = training[, -10]
+X_test = testing[, -10]
+y_test = testing[, -10]
+
+
+# X = db[, -10]
+# ss
+# ss = summary(db[, -10])
+# write.csv(as.data.frame.matrix(ss), "D:\\Coding\\Stats140 Multivariate Statistical Learning\\descriptives.csv", row.names = FALSE)
+# format(apply(db[,-10], 2, sd), scientific = FALSE)
+table(db$Class)/sum(table(db$Class))
+```
+
+
+```{r}
+# Preliminary Findings
+hist(db$Area, col = "lightblue", border = "white", main = "Histogram", xlab = "Area", ylab = "Count", breaks = seq(0, 250000, 10000))
+
+library(ggplot2)
+# Create the histogram using ggplot2
+ggplot(data = db, aes(x = db$Perimeter)) +
+  geom_histogram(bins = 50, fill = "lightblue", color = "white") +
+  labs(x = "Area", y = "Counts")
+
+ggplot(data = db, aes(x = Extent)) +
+  geom_histogram(bins = 50, fill = "lightblue", color = "white") +
+  labs(x = "Area", y = "Counts")
+
+
+# Boxplot
+library(tidyr)
+db_long <- gather(db, key = "Feature", value = "Value", -Class)
+# Create boxplots for all features
+ggplot(db_long, aes(x = Class, y = Value)) +
+  geom_boxplot(fill = "lightblue", color = "black") +
+  facet_wrap(~ Feature, scales = "free_y", ncol = 3) +
+  labs(y = "Counts")
+
+
+# ggplot(data = db, aes(x = Class, y = Perimeter)) +
+#   geom_boxplot(fill = "lightblue", color = "black") +
+#   labs(title = "Boxplot of Perimeter by Class", x = "Class", y = "Perimeter")
+```
+
+
+```{r}
+# kmeans
+Unlabel_db = db[, -10]
+kmean = kmeans(Unlabel_db, centers = 4, nstart = 100)
+print(kmean$size)
+db_with_labels <- cbind(Unlabel_db, cluster = factor(kmean$cluster))
+
+ggplot(db_with_labels, aes(x = Area, y = MinorAxisLength, color = cluster)) +
+  geom_point() +
+  labs(title = "K-means Clustering", x = "Area", y = "MinorAxisLength") +
+  scale_color_discrete(name = "Cluster")
+```
+
+
+```{r}
+# True Label
+class1 = testing[testing$Class == "BARBUNYA", ]
+class2 = testing[testing$Class == "BOMBAY", ]
+class3 = testing[testing$Class == "HOROZ", ]
+class4 = testing[testing$Class == "SEKER", ]
+class1 = class1[, -10]
+class2 = class2[, -10]
+class3 = class3[, -10]
+class4 = class4[, -10]
+
+class1 = as.matrix(class1)
+class2 = as.matrix(class2)
+class3 = as.matrix(class3)
+class4 = as.matrix(class4)
+
+
+plot(X_test$roundness, X_test$MinorAxisLength, xlab="Roundness", ylab="MinAxisLength", type="n")
+points(class1[, 9], class1[, 4], col=1)
+points(class2[, 9], class2[, 4], col=2)
+points(class3[, 9], class3[, 4], col=3)
+points(class4[, 9], class4[, 4], col=4)
+legend(x = "topleft", legend = c("Barbunya", "Bombay", "Horoz", "Seker"), col = c(1, 2, 3, 4), lty = 1, bty = "n")
+```
+
+
+```{r}
+# QQplot of area by class
+db[db$Class == "BOMBAY",]
+
+name = "SEKER"
+qqplot(qnorm(ppoints(nrow(db[db$Class == name, ]))), db[db$Class == name, ]$Area, main = "QQ Plot on Area for Seker", xlab = "Theoretical Quantiles", ylab = "Sample Quantiles")
+qqline(db[db$Class == name, ]$Area, distribution = qnorm)
+
+```
